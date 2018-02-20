@@ -8,26 +8,44 @@ class WirelessLogger:
         self.port = port
         self.peer = None
         self.loop = loop or asyncio.get_event_loop()
+        self._history = []
+        self._history_max_size = 1000
 
     async def _handle(self, reader, writer):
         self.peer = writer
         print('Connected')
+        await self.awrite('', end='') # flushing history
 
     def start(self):
         return asyncio.start_server(self._handle, self.host, self.port)
 
-    async def awrite(self, message, end='\n', flush=False):
+    @property
+    def history_size(self):
+        return sum([len(x) for x in self._history])
+
+    async def awrite(self, message, end='\n', flush=False, important=False):
         print(message, flush=flush, end=end)
         if self.peer:
+            messages_to_del = []
             try:
+                for i, (h_message, h_end) in list(enumerate(self._history)):
+                    await self.peer.awrite('{}{}'.format(h_message, h_end))
+                    messages_to_del.append(i)
                 await self.peer.awrite('{}{}'.format(message, end))
             except:
+                self._history.append((message, end))
                 try:
                     await self.peer.aclose()
                 except:
                     pass
-                self.write('Disconnected')
+                print('Disconnected')
                 self.peer = None
+
+            for i in sorted(messages_to_del, reverse=True):
+                del self._history[i]
+        else:
+            if self.history_size < self._history_max_size:
+                self._history.append((message, end))
 
     def write(self, *args, **kwargs):
         asyncio.ensure_future(self.awrite(*args, **kwargs), loop=self.loop)

@@ -1,9 +1,12 @@
 import gc
+import machine
 import network
 import picoweb
+import sys
 import uasyncio as asyncio
-import machine
 import uos
+import uio
+
 try:
     import wlog
     from wlog import log
@@ -67,28 +70,42 @@ def reset(req, resp):
     log('Got reset request')
     machine.reset()
 
+def exception_traceback_string(exc):
+    buf = uio.StringIO()
+    sys.print_exception(exc, buf)
+    return buf.getvalue()
+
 def main():
     gc.collect()
     connect('dea', '25801234d')
 
     gc.collect()
     loop = asyncio.get_event_loop()
-    asyncio.ensure_future(app.make_task('0.0.0.0', 80))
-    asyncio.ensure_future(run())
     try:
         asyncio.ensure_future(wlog.logger.start())
+        log('Logger initialized')
+        asyncio.ensure_future(app.make_task('0.0.0.0', 80))
+        log('Server initialized')
+        asyncio.ensure_future(wlog.logger.flush_history_after(1))
+        asyncio.ensure_future(wlog.logger.flush_history_after(5))
     except Exception as e:
         print(e)
+
+    gc.collect()
+    loop.run_until_complete(run())
     loop.run_forever()
     loop.close()
 
 async def run():
     log('All initialized')
+
+    try:
+        import main
+    except Exception as e:
+        log(exception_traceback_string(e), important=True)
+
     while True:
-        log('Free memory: {:0.2f} KB'.format(gc.mem_free()/1024))
-        log('Hey, seems like all works!')
-        await asyncio.sleep(3)
-    # await app.make_task('0.0.0.0', 80)
+        await asyncio.sleep(1)
 
 def connect(ssid, password):
     log('Connecting to "{}"... '.format(ssid), end='')

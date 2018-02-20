@@ -1,0 +1,2 @@
+SSID = "dea"
+PASSWORD = "25801234d"

@@ -86,8 +86,6 @@ def main():
         log('Logger initialized')
         asyncio.ensure_future(app.make_task('0.0.0.0', 80))
         log('Server initialized')
-        asyncio.ensure_future(wlog.logger.flush_history_after(1))
-        asyncio.ensure_future(wlog.logger.flush_history_after(5))
     except Exception as e:
         print(e)
 
@@ -96,12 +94,19 @@ def main():
     loop.run_forever()
     loop.close()
 
+async def notify_memory(delay=5):
+    while True:
+        log('Free memory: {:0.2f} KB'.format(gc.mem_free()/1024))
+        await asyncio.sleep(delay)
+
 async def run():
     log('All initialized')
 
     try:
+        asyncio.ensure_future(notify_memory())
         import app
         asyncio.ensure_future(app.main())
+        import usocket
     except Exception as e:
         log(exception_traceback_string(e), important=True)
 

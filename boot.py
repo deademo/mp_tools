@@ -100,7 +100,8 @@ async def run():
     log('All initialized')
 
     try:
-        import main
+        import app
+        asyncio.ensure_future(app.main())
     except Exception as e:
         log(exception_traceback_string(e), important=True)
 

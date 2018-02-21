@@ -5,6 +5,8 @@ import micropython
 import ure as re
 import uasyncio as asyncio
 
+from wlog import log
+
 
 def unquote_plus(s):
     s = s.replace("+", " ")
@@ -96,7 +98,7 @@ class WebApp:
             req = HTTPRequest()
             request_line = request_line.decode()
             method, path, proto = request_line.split()
-            print('%s %s "%s %s"' % (req, writer, method, path))
+            log('%s %s "%s %s"' % (req, writer, method, path))
             path = path.split("?", 1)
             qs = ""
             if len(path) > 1:

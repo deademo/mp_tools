@@ -70,14 +70,23 @@ def reset(req, resp):
     log('Got reset request')
     machine.reset()
 
+@app.route("/ping")
+def ping(req, resp):
+    data = 'pong'
+    await picoweb.start_response(resp, headers={'Connection': 'close', 'Content-Length': str(len(data))})
+    await resp.awrite(data)
+    await resp.aclose()
+
 def exception_traceback_string(exc):
     buf = uio.StringIO()
     sys.print_exception(exc, buf)
     return buf.getvalue()
 
 def main():
+    global _ip
+
     gc.collect()
-    connect('dea', '25801234d')
+    _ip = connect('dea', '25801234d')
 
     gc.collect()
     loop = asyncio.get_event_loop()
@@ -86,13 +95,21 @@ def main():
         log('Logger initialized')
         asyncio.ensure_future(app.make_task('0.0.0.0', 80))
         log('Server initialized')
-    except Exception as e:
-        print(e)
 
-    gc.collect()
-    loop.run_until_complete(run())
-    loop.run_forever()
-    loop.close()
+        gc.collect()
+        try:
+            loop.run_until_complete(run())
+        except Exception as e:
+            log(exception_traceback_string(e))
+        while True:
+            try:
+                loop.run_forever()
+            except Exception as e:
+                log(exception_traceback_string(e))
+        loop.close()
+    except Exception as e:
+        log(exception_traceback_string(e))
+
 
 async def notify_memory(delay=5):
     while True:
@@ -106,7 +123,8 @@ async def run():
         asyncio.ensure_future(notify_memory())
         import app
         asyncio.ensure_future(app.main())
-        import usocket
+        import discovery
+        asyncio.ensure_future(discovery.DiscoveryServer(local_ip=_ip).start())
     except Exception as e:
         log(exception_traceback_string(e), important=True)
 
@@ -122,6 +140,11 @@ def connect(ssid, password):
     while not client.isconnected():
         pass
     log('done')
+    
+    ip = client.ifconfig()[0]
+    log('IP: {}'.format(ip))
+
+    return ip
 
 
 if __name__ == '__main__':

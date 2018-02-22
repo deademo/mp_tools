@@ -11,7 +11,7 @@ port = 80
 
 def upload(ip, filename, content, port=80):
     url = 'http://{}:{}/upload?filename={}'.format(ip, port, filename)
-    requests.post(url, data=content)
+    requests.post(url, data=content, timeout=10)
 
 start_time = time.time()
 files = glob.glob(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "*.py"))

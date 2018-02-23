@@ -31,3 +31,6 @@ compile_micropython:
 clear:
 	rm -rf micropython
 	rm -rf micropython-lib
+
+discovery:
+	python3 tools/discovery.py

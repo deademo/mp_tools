@@ -1,17 +1,20 @@
 import gc
 import machine
 import network
-import picoweb
 import sys
 import uasyncio as asyncio
 import uos
 import uio
+
+import settings
+import picoweb
 
 try:
     import wlog
     from wlog import log
 except Exception as e:
     print(e)
+
 
 gc.collect()
 app = picoweb.WebApp(__name__)
@@ -99,7 +102,7 @@ def main():
     global _ip
 
     gc.collect()
-    _ip = connect('dea', '25801234d')
+    _ip = connect(settings.WIFI_SSID, settings.WIFI_PASSWORD)
 
     gc.collect()
     loop = asyncio.get_event_loop()

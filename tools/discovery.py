@@ -9,8 +9,12 @@ import requests
 logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s')
 
 
+class DiscoveryNotFound(Exception):
+    pass
+
+
 class DiscoveryTool:
-    def __init__(self, port=82, *, loop=None):
+    def __init__(self, port=82, fast_mode=False, *, loop=None):
         self.loop = loop or asyncio.get_event_loop()
 
         self.logger = logging.getLogger('discovery')
@@ -19,6 +23,8 @@ class DiscoveryTool:
 
         self.port = port
         self._transport = None
+        # If True then discovering will be stopped after first found device
+        self._fast_mode = fast_mode
 
         # It's expected delay between incoming messages
         # Needed to calculate how much time needed to wait to make sure
@@ -60,7 +66,18 @@ class DiscoveryTool:
         # Waiting for incoming messages
         time_to_wait = self._expected_message_delay*self._messages_count_to_wait
         self.logger.debug('Waiting {} s'.format(time_to_wait))
-        await asyncio.sleep(time_to_wait)
+
+        if not self._fast_mode:
+            await asyncio.sleep(time_to_wait)
+        else:
+            total_waited = 0
+            time_part = 0.1
+            while total_waited < time_to_wait:
+                await asyncio.sleep(time_part)
+                total_waited += time_part
+
+                if len(self._discovered_ips_buffer):
+                    break
 
         return self._discovered_ips_buffer
 
@@ -77,12 +94,30 @@ class DiscoveryTool:
         for ip in sorted(list(self._discovered_ips_buffer)):
             self.logger.info(ip)
 
+    @property
+    def last_discovered(self):
+        return self._discovered_ips_buffer
+
     #TODO: use asyncio
     def is_alive(self, ip, port=80):
         try:
             return requests.get('http://{}:{}/ping'.format(ip, port), timeout=3).text == 'pong'
         except:
             return False
+
+
+def discover(fast_mode=False):
+    tool = DiscoveryTool(fast_mode=fast_mode)
+    tool.logger.setLevel(logging.CRITICAL)
+    tool.start()
+    return tool.last_discovered
+
+
+def first():
+    found = list(discover(fast_mode=True))
+    if not found:
+        raise DiscoveryNotFound
+    return found[0]
 
 
 if __name__ == '__main__':

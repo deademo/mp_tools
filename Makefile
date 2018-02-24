@@ -11,6 +11,20 @@ upload_wired:
 	ampy --port /dev/tty.wchusbserial1420 -d 1 put boot.py
 	ampy --port /dev/tty.wchusbserial1420 -d 1 put picoweb.py
 	ampy --port /dev/tty.wchusbserial1420 -d 1 put wlog.py
+	ampy --port /dev/tty.wchusbserial1420 -d 1 put discovery.py
+	ampy --port /dev/tty.wchusbserial1420 -d 1 put app.py
+
+upload_wired_windows:
+	set AMPY_PORT=COM5
+	ampy -d 1 put boot.py
+	ampy -d 1 put picoweb.py
+	ampy -d 1 put wlog.py
+	ampy -d 1 put discovery.py
+	ampy -d 1 put app.py
+
+upload_firmware_windows:
+	esptool.py --port COM5 --baud 460800 erase_flash
+	esptool.py --port COM5 --baud 460800 write_flash --flash_size=detect -fm dio 0 firmware/esp8266-20171101-v1.9.3.bin --verify
 
 python: upload_firmware upload_wired
 

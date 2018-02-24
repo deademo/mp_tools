@@ -34,19 +34,32 @@ def upload(req, resp):
     size = int(req.headers[b"Content-Length"])
     block_size = 128
 
+    file_size_reopen = 1024
+    reopen_every_n_block = int(file_size_reopen/128)
+    if reopen_every_n_block <= 0:
+        reopen_every_n_block = 1
+
     try:
         log('')
-        with open(filename+'_tmp', 'wb') as f:
-            while total_read < size:
-                if total_read+block_size >= size:
-                    block_size = size-total_read
+        f = open(filename+'_tmp', 'wb')
+        while total_read < size:
+            if total_read+block_size >= size:
+                block_size = size-total_read
 
-                read_buffer = await req.reader.read(block_size)
-                f.write(read_buffer)
+            read_buffer = await req.reader.read(block_size)
+            f.write(read_buffer)
 
-                total_read += len(read_buffer)
-                log('\rDownloading file "{}": {:>6.2f}% {:0.2f}/{:0.2f} KB ... '.format(filename, total_read/size*100, total_read/1024, size/1024), end='')
-            log(' done!')
+            block_read = int(total_read/block_size)
+            if block_read % reopen_every_n_block == 0:
+                f.close()
+                f = open(filename+'_tmp', 'ab')
+                gc.collect
+
+            total_read += len(read_buffer)
+            if total_read % 1024 == 0:
+                log('\r{:>6.2f}% {:0.2f}/{:0.2f} KB - {} ... '.format(total_read/size*100, total_read/1024, size/1024, filename))
+        log(' done!')
+        f.close()
 
 
         data = 'ok'
@@ -113,7 +126,7 @@ def main():
 
 async def notify_memory(delay=5):
     while True:
-        log('Free memory: {:0.2f} KB'.format(gc.mem_free()/1024))
+        log('FM: {:0.2f} KB'.format(gc.mem_free()/1024))
         await asyncio.sleep(delay)
 
 async def run():

@@ -2,6 +2,7 @@ import glob
 import requests
 import time
 import os
+import hashlib
 
 
 request_template = 'http://{ip}:{port}/upload?filename={filename}'
@@ -9,12 +10,49 @@ ip = '192.168.1.100'
 port = 80
 
 
-def upload(ip, filename, content, port=80, timeout=20):
-    url = 'http://{}:{}/upload?filename={}'.format(ip, port, filename)
-    requests.post(url, data=content, timeout=timeout)
+def get_hashfile(separator=': '):
+    error = None
+    for _ in range(5):
+        try:
+            response = requests.get('http://{}:{}/hashfile'.format(ip, port), timeout=5)
+            content = response.text.strip()
+        except Exception as e:
+            error = e
+            print(e)
+            content = 'error'
+        if content == 'error':
+            continue
+    if content == 'error' and error:
+        raise error
+    elif content == 'error' and not error:
+        raise Exception('ESP returted error')
+    lines = [x for x in response.text.split('\n') if x]
+
+    file_map = {}
+    for line in lines:
+        splitted_line = line.split(separator)
+        filehash = splitted_line[-1]
+        filename = separator.join(splitted_line[:-1])
+        file_map[filename] = filehash
+
+    return file_map
+
+
+def upload(ip, filename, content, port=80, timeout=20, hashfile={}):
+    filehash = hashlib.md5()
+    filehash.update(content.encode('utf-8', 'ignore'))
+    filehash = filehash.hexdigest()
+    url = 'http://{}:{}/upload?filename={}&filehash={}'.format(ip, port, filename, filehash)
+
+    if hashfile.get(filename) != filehash:
+        response = requests.post(url, data=content, timeout=timeout)
+        return True
+    else:
+        return False
 
 
 def main():
+    hashfile = get_hashfile()
     start_time = time.time()
     files = glob.glob(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "*.py"))
     print('Starting uploading {} files to esp on {}'.format(len(files), ip))
@@ -22,8 +60,10 @@ def main():
         print('Uploading "{}"...'.format(file_name), end='', flush=True)
 
         with open(file_name, 'r') as f:
-            upload(ip, os.path.basename(file_name), f.read())
-            print(' done', flush=True)
+            if upload(ip, os.path.basename(file_name), f.read(), hashfile=hashfile):
+                print(' done', flush=True)
+            else:
+                print(' not needed', flush=True)
     try:
         print('Restarting esp... ', end='', flush=True)
         requests.get('http://{}:{}/reset'.format(ip, port), timeout=3)

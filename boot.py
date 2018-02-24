@@ -6,8 +6,9 @@ import uasyncio as asyncio
 import uos
 import uio
 
-import settings
+import hashfile
 import picoweb
+import settings
 
 try:
     import wlog
@@ -29,6 +30,14 @@ def upload(req, resp):
         filename = params['filename'][0]
     else:
         data = 'filename param not provided'
+        await picoweb.start_response(resp, headers={'Content-Length': str(len(data))})
+        await resp.awrite(data)
+        gc.collect()
+
+    if 'filehash' in params and len(params['filehash']):
+        filehash = params['filehash'][0]
+    else:
+        data = 'filehash param not provided'
         await picoweb.start_response(resp, headers={'Content-Length': str(len(data))})
         await resp.awrite(data)
         gc.collect()
@@ -70,10 +79,32 @@ def upload(req, resp):
         await resp.awrite(data)
 
         uos.rename(filename+'_tmp', filename)
-    except:
+        hashfile.put_filehash(filename, filehash, True)
+    except Exception as e:
+        log(exception_traceback_string(e))
         data = 'failed'
         await picoweb.start_response(resp, headers={'Connection': 'close', 'Content-Length': str(len(data))})
         await resp.awrite(data)
+    gc.collect()
+
+@app.route("/hashfile")
+def hash(req, resp):
+    gc.collect()
+    try:
+        with open('.hashfile', 'r') as f:
+            content = f.read()
+    except Exception as e:
+        log(exception_traceback_string(e))
+        content = 'error'
+
+    if not content.split():
+        content = 'empty'
+
+
+    data = str(content)
+    await picoweb.start_response(resp, headers={'Connection': 'close', 'Content-Length': str(len(data))})
+    await resp.awrite(data)
+    await resp.aclose()
     gc.collect()
 
 @app.route("/reset")
@@ -129,6 +160,7 @@ def main():
 
 async def notify_memory(delay=5):
     while True:
+        gc.collect()
         log('FM: {:0.2f} KB'.format(gc.mem_free()/1024))
         await asyncio.sleep(delay)
 

@@ -21,6 +21,7 @@ upload_wired_windows:
 	ampy -d 1 put wlog.py
 	ampy -d 1 put discovery.py
 	ampy -d 1 put app.py
+	ampy -d 1 put hashfile.py
 
 upload_firmware_windows:
 	esptool.py --port COM5 --baud 460800 erase_flash

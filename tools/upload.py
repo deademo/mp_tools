@@ -40,7 +40,7 @@ def get_hashfile(separator=': '):
 
 def upload(ip, filename, content, port=80, timeout=20, hashfile={}):
     filehash = hashlib.md5()
-    filehash.update(content.encode('utf-8', 'ignore'))
+    filehash.update(content)
     filehash = filehash.hexdigest()
     url = 'http://{}:{}/upload?filename={}&filehash={}'.format(ip, port, filename, filehash)
 
@@ -54,12 +54,23 @@ def upload(ip, filename, content, port=80, timeout=20, hashfile={}):
 def main():
     hashfile = get_hashfile()
     start_time = time.time()
-    files = glob.glob(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "*.py"))
+
+    f = lambda x: glob.glob(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), x))
+    buffer_files = [ # higher - more priority
+        f("*.mpy"), 
+        f("*.py"),
+    ]
+
+    files = set()
+    for file in buffer_files:
+        [files.add(x) for x in file]
+    files = list(sorted(list(files)))
+
     print('Starting uploading {} files to esp on {}'.format(len(files), ip))
     for i, file_name in enumerate(files):
         print('Uploading "{}"...'.format(file_name), end='', flush=True)
 
-        with open(file_name, 'r') as f:
+        with open(file_name, 'rb') as f:
             if upload(ip, os.path.basename(file_name), f.read(), hashfile=hashfile):
                 print(' done', flush=True)
             else:

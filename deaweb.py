@@ -12,7 +12,14 @@ class Server:
         self._handlers = {}
 
 
-    async def handler(self, reader, writer):
+    def handler(self, path):
+        def make_handler(handler):
+            self._handlers[path] = handler
+            return handler
+        return make_handler
+
+
+    async def server_handler(self, reader, writer):
         request = Request(reader)
         await request.read_headers()
         response = self._handlers.get(request.path, self.handler_404)(request)
@@ -28,7 +35,7 @@ class Server:
 
 
     def start_server(self, ip="0.0.0.0", port=8080):
-        asyncio.ensure_future(asyncio.start_server(self.handler, ip, port), loop=self.loop)
+        asyncio.ensure_future(asyncio.start_server(self.server_handler, ip, port), loop=self.loop)
 
 
 class Request:
@@ -134,14 +141,16 @@ def parse_qs(s):
 
 
 def main():
-    loop = asyncio.get_event_loop()
-    app = Server(loop=loop)
+    app = Server()
 
-    app.add_handler('/', lambda x: 'Hello, world!')
+    @app.handler('/')
+    def hello(request):
+        return 'Hello, world!'
+
     app.start_server()
         
-    loop.run_forever()
-    loop.close()    
+    app.loop.run_forever()
+    app.loop.close()    
 
 
 if __name__ == '__main__':

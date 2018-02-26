@@ -89,13 +89,11 @@ class Response:
             else:
                 writer.write(data.encode())
 
-        await __write(self.__response_template.format(
-            # default headers
-            **{
-                'content_length': self.content_length,
-            }, 
-            **self.default_headers,
-        ))
+        headers_values = {
+            'content_length': self.content_length,
+        }
+        headers_values.update(self.default_headers)
+        await __write(self.__response_template.format(**headers_values))
 
         if self.body:
             await __write(self.body+"\r\n")

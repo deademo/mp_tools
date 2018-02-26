@@ -56,15 +56,19 @@ def main():
     start_time = time.time()
 
     f = lambda x: glob.glob(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), x))
-    buffer_files = [ # higher - more priority
+
+    # higher - more priority
+    buffer_files = [
         f("*.mpy"), 
         f("*.py"),
     ]
 
-    files = set()
-    for file in buffer_files:
-        [files.add(x) for x in file]
-    files = list(sorted(list(files)))
+    files = {}
+    for files_chunk in buffer_files[::-1]:
+        for file in files_chunk:
+            file_without_extension = '.'.join(file.split('.')[:-1])
+            files[file_without_extension] = file
+    files = list(sorted(list(files.values())))
 
     print('Starting uploading {} files to esp on {}'.format(len(files), ip))
     for i, file_name in enumerate(files):

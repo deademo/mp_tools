@@ -49,3 +49,8 @@ clear:
 
 discovery:
 	python3 tools/discovery.py
+
+mpy-cross:
+	git clone https://github.com/pfalcon/micropython
+	cd micropython/mpy-cross && make
+	cp micropython/mpy-cross/mpy-cross mpy-cross

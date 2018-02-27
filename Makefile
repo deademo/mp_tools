@@ -1,6 +1,6 @@
 dev: upload
 
-upload:
+upload: mpy
 	python3 tools/upload.py
 
 upload_firmware:
@@ -54,3 +54,6 @@ mpy-cross:
 	git clone https://github.com/pfalcon/micropython
 	cd micropython/mpy-cross && make
 	cp micropython/mpy-cross/mpy-cross mpy-cross
+
+mpy:
+	./mpy-cross deaweb.py

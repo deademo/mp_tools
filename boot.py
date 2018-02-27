@@ -7,7 +7,7 @@ import uos
 import uio
 
 import hashfile
-import picoweb
+from deaweb import Server, Response
 import settings
 
 try:
@@ -18,32 +18,19 @@ except Exception as e:
 
 
 gc.collect()
-app = picoweb.WebApp(__name__)
+app = Server()
 
-@app.route("/upload")
-def upload(req, resp):
-
-    req.parse_qs()
-    params = req.form
-
-    if 'filename' in params and len(params['filename']):
-        filename = params['filename'][0]
-    else:
-        data = 'filename param not provided'
-        await picoweb.start_response(resp, headers={'Content-Length': str(len(data))})
-        await resp.awrite(data)
-        gc.collect()
-
-    if 'filehash' in params and len(params['filehash']):
-        filehash = params['filehash'][0]
-    else:
-        data = 'filehash param not provided'
-        await picoweb.start_response(resp, headers={'Content-Length': str(len(data))})
-        await resp.awrite(data)
-        gc.collect()
+@app.handler('/upload')
+def upload(request):
+    filename = request.get('filename')
+    if not filename:
+        return 'filename param not provided'
+    filehash = request.get('filehash')
+    if not filehash:
+        return 'filehash param not provided'
 
     total_read = 0
-    size = int(req.headers[b"Content-Length"])
+    size = int(request.headers.get('Content-Length', 0))
     block_size = 128
 
     file_size_reopen = 1024
@@ -58,14 +45,14 @@ def upload(req, resp):
             if total_read+block_size >= size:
                 block_size = size-total_read
 
-            read_buffer = await req.reader.read(block_size)
+            read_buffer = await request.reader.read(block_size)
             f.write(read_buffer)
 
             block_read = int(total_read/block_size)
             if block_read % reopen_every_n_block == 0:
                 f.close()
                 f = open(filename+'_tmp', 'ab')
-                gc.collect
+                gc.collect()
 
             total_read += len(read_buffer)
             if total_read % 1024 == 0:
@@ -73,56 +60,39 @@ def upload(req, resp):
         log(' done!')
         f.close()
 
-
-        data = 'ok'
-        await picoweb.start_response(resp, headers={'Connection': 'close', 'Content-Length': str(len(data))})
-        await resp.awrite(data)
-
         uos.rename(filename+'_tmp', filename)
         hashfile.put_filehash(filename, filehash, True)
+
+        return 'ok'
     except Exception as e:
         log(exception_traceback_string(e))
-        data = 'failed'
-        await picoweb.start_response(resp, headers={'Connection': 'close', 'Content-Length': str(len(data))})
-        await resp.awrite(data)
-    gc.collect()
+        return 'failed'
 
-@app.route("/hashfile")
-def hash(req, resp):
+@app.handler('/hashfile')
+def hash(request):
     gc.collect()
     try:
         with open('.hashfile', 'r') as f:
-            content = f.read()
+            data = f.read()
     except Exception as e:
         log(exception_traceback_string(e))
-        content = 'error'
+        data = 'error'
 
-    if not content.split():
-        content = 'empty'
+    if not data.strip():
+        data = 'empty'
 
+    return data
 
-    data = str(content)
-    await picoweb.start_response(resp, headers={'Connection': 'close', 'Content-Length': str(len(data))})
-    await resp.awrite(data)
-    await resp.aclose()
-    gc.collect()
-
-@app.route("/reset")
-def reset(req, resp):
-    data = 'ok'
-    await picoweb.start_response(resp, headers={'Connection': 'close', 'Content-Length': str(len(data))})
-    await resp.awrite(data)
-    await resp.aclose()
+@app.handler('/reset')
+def reset(request):
+    await Response('ok', request=request).awrite()
     await asyncio.sleep(0.5)
     log('Got reset request')
     machine.reset()
 
-@app.route("/ping")
-def ping(req, resp):
-    data = 'pong'
-    await picoweb.start_response(resp, headers={'Connection': 'close', 'Content-Length': str(len(data))})
-    await resp.awrite(data)
-    await resp.aclose()
+@app.handler('/ping')
+def ping(request):
+    return 'pong'
 
 def exception_traceback_string(exc):
     buf = uio.StringIO()
@@ -140,7 +110,7 @@ def main():
     try:
         asyncio.ensure_future(wlog.logger.start())
         log('Logger initialized')
-        asyncio.ensure_future(app.make_task('0.0.0.0', 80))
+        asyncio.ensure_future(app.make_server('0.0.0.0', 80))
         log('Server initialized')
 
         gc.collect()

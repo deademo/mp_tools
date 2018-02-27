@@ -110,10 +110,11 @@ class Response:
         "\r\n")
 
 
-    def __init__(self, body=None, status_code=200, *, request=None):
+    def __init__(self, body=None, status_code=200, content_type='text/html', *, request=None):
         self.body = body
         self.status_code = status_code
         self.request = request
+        self.content_type = content_type
 
 
     async def awrite(self):
@@ -125,24 +126,19 @@ class Response:
 
         headers_values = {
             'content_length': self.content_length,
+            'status_code': self.status_code,
+            'content_type': self.content_type,
         }
-        headers_values.update(self.default_headers)
         await __write(self.__response_template.format(**headers_values))
 
         if self.body:
             await __write(self.body+"\r\n")
 
+
     async def aclose(self):
         if hasattr(self.request.writer, 'aclose'):
             await self.request.writer.aclose()
 
-    # TODO: rename, because status_code is default values, not default header
-    @property
-    def default_headers(self):
-        return {
-            'status_code': self.status_code,
-            'content_type': 'text/html',
-        }
 
     @property
     def content_length(self):

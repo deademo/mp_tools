@@ -24,7 +24,7 @@ async def main():
         _buffer = ''
         while True:
             try:
-                data = await asyncio.wait_for(reader.read(1), timeout=5)
+                data = await asyncio.wait_for(reader.read(10), timeout=5)
                 data = data.decode('utf-8')
                 _buffer += data
                 if '\n' in _buffer:

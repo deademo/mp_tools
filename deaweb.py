@@ -20,40 +20,55 @@ class Server:
 
 
     async def server_handler(self, reader, writer):
-        request = Request(reader)
+        request = Request(reader, writer)
         await request.read_headers()
-        response = self._handlers.get(request.path, self.handler_404)(request)
+        handler = self._handlers.get(request.path, self.handler_404)
+
+        is_coroutine = hasattr(asyncio, 'iscoroutinefunction') and asyncio.iscoroutinefunction(handler)
+        if is_coroutine or handler.__class__.__name__ == 'generator':
+            response = await handler(request)
+        else:
+            response = handler(request)
+
+        if response is None:
+            return None
 
         if not isinstance(response, Response):
             response = Response(response)
         response.request = request
-        await response.awrite(writer)
+        await response.awrite()
+        await response.aclose()
 
 
     def add_handler(self, path, handler):
         self._handlers[path] = handler
 
 
-    def start_server(self, ip="0.0.0.0", port=8080):
-        asyncio.ensure_future(asyncio.start_server(self.server_handler, ip, port), loop=self.loop)
+    def make_server(self, ip="0.0.0.0", port=8080):
+        return asyncio.start_server(self.server_handler, ip, port)
+
+
+    def start_server(self, *args, **kwargs):
+        asyncio.ensure_future(self.make_server(*args, **kwargs), loop=self.loop)
 
 
 class Request:
-    def __init__(self, reader, *, loop=None):
+    def __init__(self, reader, writer, *, loop=None):
         self.loop = loop
-        self._reader = reader
+        self.reader = reader
+        self.writer = writer
         self.headers = None
         self.method = None
         self.path = None
         self.protocol = None
-        self.query_params = {}
+        self.params = {}
 
 
     async def read_headers(self):
         self.headers = {}
 
         # First request line
-        line = await self._reader.readline()
+        line = await self.reader.readline()
         self.method, path, self.protocol = line.split()
 
         # Splitting path and query string
@@ -61,16 +76,28 @@ class Request:
         self.path = '/'+path[0].strip(b'/').decode()
         if len(path) > 1:
             query_string = path[1]
-            self.query_params = parse_qs(query_string.decode())
+            self.params = parse_qs(query_string.decode())
 
         # Do ... while headers provided
-        line = await self._reader.readline()
+        line = await self.reader.readline()
         while line != b"\r\n":
             k, v = line.split(b":", 1)
-            self.headers[k.decode()] = v.decode().strip()
-            line = await self._reader.readline()
+            self.headers[k.decode().strip()] = v.decode().strip()
+            line = await self.reader.readline()
 
         return self.headers
+
+
+    def get(self, name):
+        data = self.params.get(name)
+        if data and len(data) == 1:
+            return data[0]
+        return data
+
+
+    @property
+    def content_length(self):
+        return int(self.headers.get('Content-Length', 0))
 
 
 class Response:
@@ -83,18 +110,18 @@ class Response:
         "\r\n")
 
 
-    def __init__(self, body=None, status_code=200):
+    def __init__(self, body=None, status_code=200, *, request=None):
         self.body = body
         self.status_code = status_code
-        self.request = None # sets outside the class
+        self.request = request
 
 
-    async def awrite(self, writer):
+    async def awrite(self):
         async def __write(data):
-            if hasattr(writer, 'awrite'):
-                await writer.awrite(data.encode())
+            if hasattr(self.request.writer, 'awrite'):
+                await self.request.writer.awrite(data.encode())
             else:
-                writer.write(data.encode())
+                self.request.writer.write(data.encode())
 
         headers_values = {
             'content_length': self.content_length,
@@ -104,6 +131,10 @@ class Response:
 
         if self.body:
             await __write(self.body+"\r\n")
+
+    async def aclose(self):
+        if hasattr(self.request.writer, 'aclose'):
+            await self.request.writer.aclose()
 
     # TODO: rename, because status_code is default values, not default header
     @property
@@ -144,8 +175,9 @@ def main():
     app = Server()
 
     @app.handler('/')
-    def hello(request):
-        return 'Hello, world!'
+    async def hello(request):
+        await Response('ok', request=request).awrite()
+        return None
 
     app.start_server()
         

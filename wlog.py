@@ -24,7 +24,10 @@ class WirelessLogger:
         return sum([len(x) for x in self._history])
 
     async def awrite(self, message, end='\n', flush=False, important=False):
+        # stdout
         print(message, flush=flush, end=end)
+
+        # wifi
         if self.peer:
             messages_to_del = []
             try:
@@ -47,6 +50,10 @@ class WirelessLogger:
             if self.history_size < self._history_max_size:
                 self._history.append((message, end))
 
+        # screen
+        if screen and screen.initialized:
+            screen.write_line(message)
+
     def write(self, *args, **kwargs):
         asyncio.ensure_future(self.awrite(*args, **kwargs), loop=self.loop)
 
@@ -54,3 +61,9 @@ logger = WirelessLogger('0.0.0.0', 81)
 
 def log(*args, **kwargs):
     logger.write(*args, **kwargs)
+
+try:
+    from screen import screen
+except Exception as e:
+    log(e)
+    screen = None

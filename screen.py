@@ -30,4 +30,12 @@ class DeviceScreen:
         self.initialized = self.oled is not None
 
 
+    def write_line(self, str):
+        if self.initialized:
+            self.oled.scroll(0, 8)
+            self.oled.fill_rect(0, 0, 9999, 8, 0)
+            self.oled.text(message, 0, 0)
+            self.oled.show()
+
+
 screen = DeviceScreen()

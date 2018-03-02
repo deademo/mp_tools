@@ -16,6 +16,7 @@ try:
 except Exception as e:
     print(e)
 
+SKIP_COMPILED = ['main', 'boot', 'init']
 
 gc.collect()
 app = Server()
@@ -61,7 +62,23 @@ def upload(request):
         f.close()
 
         uos.rename(filename+'_tmp', filename)
-        hashfile.put_filehash(filename, filehash, True)
+
+        remove_basename = ".".join(filename.split(".")[:-1])
+        remove_ext = filename.split(".")[-1]
+        removed_local_filename = None
+        if remove_basename not in SKIP_COMPILED:
+            for local_filename in uos.listdir():
+                local_basename = ".".join(local_filename.split(".")[:-1])
+                local_ext = local_filename.split(".")[-1]
+                if remove_basename == local_basename and remove_ext != local_ext:
+                    log('Removing local .{} file as got .{} version of file'.format(local_ext, remove_ext))
+                    uos.remove(local_filename)
+                    removed_local_filename = local_filename
+
+        file_map = hashfile.read_hashfile()
+        if file_map.get(removed_local_filename):
+            hashfile.remove_filehash(removed_local_filename, file_map=file_map)
+        hashfile.put_filehash(filename, filehash, True, file_map=file_map) 
 
         return 'ok'
     except Exception as e:
@@ -72,8 +89,7 @@ def upload(request):
 def hash(request):
     gc.collect()
     try:
-        with open('.hashfile', 'r') as f:
-            data = f.read()
+        data = hashfile.read_hashfile_raw()
     except Exception as e:
         log(exception_traceback_string(e))
         data = 'error'

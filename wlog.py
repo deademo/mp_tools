@@ -62,8 +62,9 @@ logger = WirelessLogger('0.0.0.0', 81)
 def log(*args, **kwargs):
     logger.write(*args, **kwargs)
 
-try:
-    from screen import screen
-except Exception as e:
-    log(e)
-    screen = None
+# try:
+#     from screen import screen
+# except Exception as e:
+#     log(e)
+#     screen = None
+screen = None

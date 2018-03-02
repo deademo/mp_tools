@@ -1,6 +1,6 @@
 dev: upload
 
-upload: mpy
+upload:
 	python3 tools/upload.py
 
 upload_firmware:

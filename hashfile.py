@@ -1,10 +1,22 @@
 import gc
 
 
+def read_hashfile_raw(filename='.hashfile'):
+    try:
+        with open('.hashfile', 'r') as f:
+            content = f.read()
+    except OSError as e:
+        if 'ENOENT' in str(e):
+            content = ''
+        else:
+            raise
+
+    return content
+
+
 def read_hashfile(separator=': '):
     gc.collect()
-    with open('.hashfile', 'r') as f:
-        content = f.read()
+    content = read_hashfile_raw()
     lines = [x for x in content.split('\n') if x]
 
     file_map = {}
@@ -39,7 +51,7 @@ def filehash_equal(filename, filehash, file_map=None):
     return file_map.get(filename) == filehash
 
 
-def put_filehash(filename, filehash, check=False):
+def put_filehash(filename, filehash, check=False, file_map=None):
     if check:
         file_map = read_hashfile()
         check_result = filehash_equal(filename, filehash, file_map)

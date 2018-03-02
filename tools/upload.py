@@ -70,6 +70,7 @@ def main():
             files[file_without_extension] = file
     files = list(sorted(list(files.values())))
 
+    any_file_uploaded = False
     print('Starting uploading {} files to esp on {}'.format(len(files), ip))
     for i, file_name in enumerate(files):
         print('Uploading "{}"...'.format(file_name), end='', flush=True)
@@ -77,14 +78,17 @@ def main():
         with open(file_name, 'rb') as f:
             if upload(ip, os.path.basename(file_name), f.read(), hashfile=hashfile):
                 print(' done', flush=True)
+                any_file_uploaded = True
             else:
                 print(' not needed', flush=True)
-    try:
-        print('Restarting esp... ', end='', flush=True)
-        requests.get('http://{}:{}/reset'.format(ip, port), timeout=3)
-        print('done', flush=True)
-    except:
-        pass
+
+    if any_file_uploaded:
+        try:
+            print('Restarting esp... ', end='', flush=True)
+            requests.get('http://{}:{}/reset'.format(ip, port), timeout=3)
+            print('done', flush=True)
+        except:
+            pass
     print('Done for {:0.2f} s'.format(time.time() - start_time), flush=True)
 
 

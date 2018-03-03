@@ -9,6 +9,7 @@ import uio
 import hashfile
 from deaweb import Server, Response
 import settings
+import wifi
 
 try:
     import wlog
@@ -16,7 +17,7 @@ try:
 except Exception as e:
     print(e)
 
-SKIP_COMPILED = ['main', 'boot', 'init']
+SKIP_COMPILED = ['main', 'boot']
 
 gc.collect()
 app = Server()
@@ -116,10 +117,8 @@ def exception_traceback_string(exc):
     return buf.getvalue()
 
 def main():
-    global _ip
-
     gc.collect()
-    _ip = connect(settings.WIFI_SSID, settings.WIFI_PASSWORD)
+    wifi.connect(settings.WIFI_SSID, settings.WIFI_PASSWORD)
 
     gc.collect()
     loop = asyncio.get_event_loop()
@@ -157,28 +156,14 @@ async def run():
         asyncio.ensure_future(notify_memory())
         import app
         asyncio.ensure_future(app.main())
+        asyncio.ensure_future(notify_wifi())
         import discovery
-        asyncio.ensure_future(discovery.DiscoveryServer(local_ip=_ip).start())
+        asyncio.ensure_future(discovery.DiscoveryServer(local_ip=wifi.get_ip()).start())
     except Exception as e:
         log(exception_traceback_string(e), important=True)
 
     while True:
         await asyncio.sleep(1)
-
-def connect(ssid, password):
-    log('Connecting to "{}"... '.format(ssid), end='')
-    client = network.WLAN(network.STA_IF)
-    client.active(True)
-    client.connect(ssid, password)
-
-    while not client.isconnected():
-        pass
-    log('done')
-    
-    ip = client.ifconfig()[0]
-    log('IP: {}'.format(ip))
-
-    return ip
 
 
 if __name__ == '__main__':

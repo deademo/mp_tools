@@ -1,7 +1,7 @@
 dev: upload
 
 upload:
-	python3 tools/upload.py
+	python tools/upload.py
 
 upload_firmware:
 	esptool.py --port /dev/tty.wchusbserial1420 --baud 460800 erase_flash
@@ -36,7 +36,7 @@ deps:
 	-rmdir /S /Q deaweb
 	-rm -rf deaweb
 
-init_windows: upload_firmware_windows deps upload_wired_windows
+init_windows: upload_firmware_windows deps upload_wired_windows connect
 
 deps_compile: mpy-cross
 	git clone https://github.com/deademo/deaweb
@@ -55,7 +55,7 @@ connect_wired:
 	screen /dev/tty.wchusbserial1420 115200
 
 connect:
-	python3 tools/connect.py
+	python tools/connect.py
 
 compile_micropython:
 	brew install libffi
@@ -70,7 +70,7 @@ clear:
 	rm -rf micropython-lib
 
 discovery:
-	python3 tools/discovery.py
+	python tools/discovery.py
 
 mpy-cross:
 	git clone https://github.com/pfalcon/micropython

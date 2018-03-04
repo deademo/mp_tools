@@ -22,6 +22,28 @@ upload_wired_windows:
 	ampy -d 1 put app.py
 	ampy -d 1 put screen.py
 	ampy -d 1 put hashfile.py
+	ampy -d 1 put settings.py
+	ampy -d 1 put settings_local.py
+	ampy -d 1 put upload.py
+	ampy -d 1 put wifi.py
+	ampy -d 1 put deaweb.mpy
+
+
+deps:
+	-git clone https://github.com/deademo/deaweb
+	-@copy /y deaweb\deaweb.mpy deaweb.mpy
+	-@cp deaweb/deaweb/deaweb.py deaweb.py
+	-rmdir /S /Q deaweb
+	-rm -rf deaweb
+
+init_windows: upload_firmware_windows deps upload_wired_windows
+
+deps_compile: mpy-cross
+	git clone https://github.com/deademo/deaweb
+	@cp deaweb/deaweb/deaweb.py deaweb.py
+	./mpy-cross deaweb.py
+	rm deaweb.py
+	rm -rf deaweb	
 
 upload_firmware_windows:
 	esptool.py --port COM5 --baud 460800 erase_flash

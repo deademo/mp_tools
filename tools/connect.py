@@ -1,6 +1,8 @@
 import asyncio
 import logging
 
+from discovery import first
+
 
 logging.basicConfig(format='%(asctime)s %(msg)s')
 logger = logging.getLogger(__file__)
@@ -8,7 +10,7 @@ logger.setLevel(logging.DEBUG)
 
 
 async def main():
-    host = '192.168.1.100'
+    host = first()
     port = 81
 
     logger.info('Connecting to {}:{}...'.format(host, port))

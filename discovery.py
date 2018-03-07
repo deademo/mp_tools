@@ -5,7 +5,7 @@ from wlog import log
 
 
 class DiscoveryServer:
-    def __init__(self, local_ip, port=82, delay=1, loop=None):
+    def __init__(self, local_ip, port=8282, delay=1, loop=None):
         self._socket = None
         self._local_ip = local_ip
         self._port = port

@@ -14,7 +14,7 @@ class DiscoveryNotFound(Exception):
 
 
 class DiscoveryTool:
-    def __init__(self, port=82, fast_mode=False, *, loop=None):
+    def __init__(self, port=8282, fast_mode=False, *, loop=None):
         self.loop = loop or asyncio.get_event_loop()
 
         self.logger = logging.getLogger('discovery')
@@ -108,7 +108,7 @@ class DiscoveryTool:
 
 def discover(fast_mode=False):
     tool = DiscoveryTool(fast_mode=fast_mode)
-    tool.logger.setLevel(logging.CRITICAL)
+    tool.logger.setLevel(logging.DEBUG)
     tool.start()
     return tool.last_discovered
 

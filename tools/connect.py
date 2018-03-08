@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from discovery import first
+from discovery import afirst
 
 
 logging.basicConfig(format='%(asctime)s %(msg)s')
@@ -10,8 +10,11 @@ logger.setLevel(logging.DEBUG)
 
 
 async def main():
-    host = first()
+    logger.info('Searching for esp...')
+    host = await afirst()
+    await asyncio.sleep(1)
     port = 81
+    logger.info('Found: {}'.format(host))
 
     logger.info('Connecting to {}:{}...'.format(host, port))
     was_connected = False

@@ -43,6 +43,7 @@ class DiscoveryTool:
         protocol = types.SimpleNamespace()
         protocol.datagram_received = self.on_message
         protocol.connection_made = lambda x: None
+        protocol.connection_lost = lambda x: None
 
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.setblocking(False)
@@ -85,14 +86,17 @@ class DiscoveryTool:
         if not self.loop.is_running():
             self.loop.run_until_complete(self.astart())
         else:
-            asyncio.ensure_future(self.astart(), loop=self.loop)
+            self.loop.call_soon(self.astart)
 
     async def astart(self):
         await self.listen()
         await self.discover()
+
         self.logger.info('Discovered {} ips'.format(len(self._discovered_ips_buffer)))
         for ip in sorted(list(self._discovered_ips_buffer)):
             self.logger.info(ip)
+
+        self._transport.close()
 
     @property
     def last_discovered(self):
@@ -108,13 +112,23 @@ class DiscoveryTool:
 
 def discover(fast_mode=False):
     tool = DiscoveryTool(fast_mode=fast_mode)
-    tool.logger.setLevel(logging.DEBUG)
+    tool.logger.setLevel(logging.CRITICAL)
     tool.start()
     return tool.last_discovered
 
 
 def first():
     found = list(discover(fast_mode=True))
+    if not found:
+        raise DiscoveryNotFound
+    return found[0]
+
+
+async def afirst():
+    tool = DiscoveryTool(fast_mode=True)
+    tool.logger.setLevel(logging.CRITICAL)
+    await tool.astart()
+    found = list(tool.last_discovered)
     if not found:
         raise DiscoveryNotFound
     return found[0]

@@ -1,10 +1,13 @@
+import gc
 import machine
 import uos
+import uasyncio as asyncio
 
 from deaweb import Server, Response
 
 import hashfile
 from wlog import log
+from main import exception_traceback_string, SKIP_COMPILED
 
 
 app = Server()

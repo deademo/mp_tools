@@ -9,7 +9,7 @@ import requests
 logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s')
 
 
-class DiscoveryNotFound(Exception):
+class NotFound(Exception):
     pass
 
 
@@ -120,7 +120,7 @@ def discover(fast_mode=False):
 def first():
     found = list(discover(fast_mode=True))
     if not found:
-        raise DiscoveryNotFound
+        raise NotFound
     return found[0]
 
 
@@ -130,7 +130,7 @@ async def afirst():
     await tool.astart()
     found = list(tool.last_discovered)
     if not found:
-        raise DiscoveryNotFound
+        raise NotFound
     return found[0]
 
 

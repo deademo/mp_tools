@@ -1,12 +1,20 @@
 import glob
-import requests
-import time
-import os
 import hashlib
+import os
+import requests
+import sys
+import time
 
+import discovery
+
+
+try:
+    ip = discovery.first()
+except discovery.NotFound:
+    print('No esp found')
+    sys.exit()
 
 request_template = 'http://{ip}:{port}/upload?filename={filename}'
-ip = '192.168.1.100'
 port = 80
 
 

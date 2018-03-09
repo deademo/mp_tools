@@ -12,6 +12,13 @@ upload_wired:
 	ampy --port /dev/tty.wchusbserial1420 -d 1 put wlog.py
 	ampy --port /dev/tty.wchusbserial1420 -d 1 put discovery.py
 	ampy --port /dev/tty.wchusbserial1420 -d 1 put app.py
+	ampy --port /dev/tty.wchusbserial1420 -d 1 put screen.py
+	ampy --port /dev/tty.wchusbserial1420 -d 1 put hashfile.py
+	ampy --port /dev/tty.wchusbserial1420 -d 1 put settings.py
+	ampy --port /dev/tty.wchusbserial1420 -d 1 put settings_local.py
+	ampy --port /dev/tty.wchusbserial1420 -d 1 put upload.py
+	ampy --port /dev/tty.wchusbserial1420 -d 1 put wifi.py
+	ampy --port /dev/tty.wchusbserial1420 -d 1 put deaweb.mpy
 
 
 upload_wired_windows:

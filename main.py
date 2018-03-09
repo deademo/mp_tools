@@ -1,3 +1,4 @@
+import upload
 import gc
 import machine
 import sys
@@ -21,12 +22,14 @@ except Exception as e:
     print(e)
 
 
-SKIP_COMPILED = ['main', 'boot']
-
-
 def exception_traceback_string(exc):
-    buf = uio.StringIO()
-    sys.print_exception(exc, buf)
+    try:
+        buf = uio.StringIO()
+        gc.collect()
+        sys.print_exception(exc, buf)
+        gc.collect()
+    except:
+        raise
     return buf.getvalue()
 
 
@@ -47,10 +50,9 @@ def main():
     gc.collect()
     loop = asyncio.get_event_loop()
     try:
-        asyncio.ensure_future(wlog.logger.start())
-        log('Logger initialized')
+        # asyncio.ensure_future(wlog.logger.start())
+        # log('Logger initialized')
         gc.collect()
-        import upload
         asyncio.ensure_future(upload.app.make_server('0.0.0.0', 80))
         log('Server initialized')
 
@@ -77,7 +79,7 @@ def main():
 
 async def notify_memory(delay=5):
     while True:
-        gc.collect()
+        # gc.collect()
         log('FM: {:0.2f} KB'.format(gc.mem_free()/1024))
         await asyncio.sleep(delay)
 

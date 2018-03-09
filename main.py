@@ -68,6 +68,12 @@ def main():
     except Exception as e:
         log(exception_traceback_string(e))
 
+    try:
+        log('Restarting esp as asyncio loop closed')
+    except:
+        pass
+    machine.reset()
+
 
 async def notify_memory(delay=5):
     while True:

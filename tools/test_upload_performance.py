@@ -11,7 +11,7 @@ logger.setLevel(logging.DEBUG)
 
 
 def make_test_file(size):
-    return 'A' * int(size)
+    return ('A' * int(size)).encode()
 
 
 def do_test(ip, file_size_kb, test_count=5, port=80):

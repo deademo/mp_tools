@@ -6,50 +6,50 @@ import os
 import websockets
 
 
-
-logger = logging.getLogger('uploader')
-
-ip = '192.168.1.100'
-port = 8266
-url = 'ws://{}:{}'.format(ip, port)
-password = 1234
-
-
 class WebREPLUploader:
     def __init__(self, ip, port, password):
         self.ip = ip
         self.port = port
         self.password = password
+        self.logger = logging.getLogger('webrepluploader')
+        self.logger.setLevel(logging.DEBUG)
+        self.logger.handler = []
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.DEBUG)
+        ch.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
+        self.logger.addHandler(ch)
 
     @property
     def url(self):
-        return 'ws://{}:{}'.format(ip, port)
+        return 'ws://{}:{}'.format(self.ip, self.port)
 
-    def connect(self):
-        pass
+    async def connect(self):
+        self.logger.info('Connecting to {}'.format(self.url))
+        async with websockets.connect(self.url) as websocket:
+            self.logger.info('Connected')
+
+            msg = await websocket.recv()
+            if msg.strip().endswith('Password:'):
+                self.logger.info('Password required, sending...')
+                _pass = (str(self.password)+'\n').encode()
+                await websocket.send(_pass)
+            else:
+                raise RuntimeError('No password required')
+
+            msg = await websocket.recv()
+            if msg.strip().endswith('>>>'):
+                self.logger.info('Successfuly connected')
+            else:
+                raise RuntimeError('Error at connecting')
 
 
 async def main():
+    ip = '192.168.1.100'
+    port = 8266
+    password = 1234
 
     client = WebREPLUploader(ip, port, password)
     await client.connect()
-
-    logger.info('Connecting to {}'.format(url), flush=True)
-
-    async with websockets.connect(url) as websocket:
-        logger.info('Connected')
-
-        msg = await websocket.recv()
-        if msg.strip().endswith('Password:'):
-            logger.info('Password required, sending')
-            _pass = (str(password)+'\n').encode()
-            await websocket.send(_pass)
-        else:
-            raise RuntimeError('No password required')
-
-        msg = await websocket.recv()
-        if msg.strip().endswith('>>>'):
-            logger.info('Successfuly connected')
 
 
 if __name__ == '__main__':

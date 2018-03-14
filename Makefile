@@ -22,7 +22,7 @@ upload_wired:
 
 
 upload_wired_windows:
-	set AMPY_PORT=COM5
+	set AMPY_PORT=COM3
 	ampy -d 1 put main.py
 	ampy -d 1 put wlog.py
 	ampy -d 1 put discovery.py
@@ -53,8 +53,8 @@ deps_compile: mpy-cross
 	rm -rf deaweb	
 
 upload_firmware_windows:
-	esptool.py --port COM5 --baud 460800 erase_flash
-	esptool.py --port COM5 --baud 460800 write_flash --flash_size=detect -fm dio 0 firmware/esp8266-20171101-v1.9.3.bin --verify
+	esptool.py --port COM3 --baud 460800 erase_flash
+	esptool.py --port COM3 --baud 460800 write_flash --flash_size=detect -fm dio 0 firmware/esp8266-20171101-v1.9.3.bin --verify
 
 python: upload_firmware upload_wired
 

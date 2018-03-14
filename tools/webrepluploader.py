@@ -53,9 +53,8 @@ class WebREPLUploader:
         self.logger.debug('Receiving answer...')
         msg = ''
         while True:
-            buf = await self.websocket.recv()
-            msg += buf
-            if buf.strip().endswith(wait_for):
+            msg += await self.websocket.recv()
+            if msg.strip().endswith(wait_for):
                 break
         self.logger.debug('Received: {}'.format(msg))
         if wait_for and not msg.strip().endswith(str(wait_for)):
@@ -67,26 +66,22 @@ class WebREPLUploader:
             data = str(data)
         data += '\r\n'
 
-        self.logger.debug('Sending: {}'.format(data))
+        self.logger.debug('Sending: {}'.format(data.strip()))
         await self.websocket.send(data)
-        msg = ''
-        for i in range(len(data)):
-            msg += await self.websocket.recv()
-            if msg.strip().endswith(wait_for):
-                break
+        await self.expect(wait_for)
                 
     async def upload_file(self, file_path, file_dest=None):
         if file_dest is None:
             file_dest = os.path.basename(file_path)
-        self.write("f = open('{}', 'w+')".format(file_dest))
+        await self.write("f = open('{}', 'w+')".format(file_dest))
         with open(file_path, 'r') as f:
             for line in f.readlines():
                 foo = 'f.write'
                 line = line.replace("'", "\\'")
                 line = line.strip('\n')
                 line = "{}('{}\\n')".format(foo, line)
-                self.write(line)
-        self.write("f.close()")
+                await self.write(line)
+        await self.write("f.close()")
 
 
 

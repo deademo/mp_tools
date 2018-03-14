@@ -13,11 +13,12 @@ class WebREPLUploader:
         self.password = password
         self.websocket = None
 
+        level = logging.INFO
         self.logger = logging.getLogger('webrepluploader')
-        self.logger.setLevel(logging.DEBUG)
+        self.logger.setLevel(level)
         self.logger.handler = []
         ch = logging.StreamHandler()
-        ch.setLevel(logging.DEBUG)
+        ch.setLevel(level)
         ch.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s'))
         self.logger.addHandler(ch)
 
@@ -26,22 +27,8 @@ class WebREPLUploader:
         return 'ws://{}:{}'.format(self.ip, self.port)
 
     async def connect(self):
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.186 Safari/537.36',
-            'Pragma': 'no-cache',
-            'Cache-Control': 'no-cache',
-            'Origin': 'http://micropython.org',
-            'Accept-Encoding': 'gzip, deflate',
-            'Accept-Language': 'ru,en-US;q=0.9,en;q=0.8',
-        }
-
-
         self.logger.info('Connecting to {}'.format(self.url))
-        self.websocket = await websockets.connect(
-            self.url,
-            # subprotocol=['permessage-deflate', 'client_max_window_bits'],
-            # extra_headers=headers
-        )
+        self.websocket = await websockets.connect(self.url, timeout=1)
         self.logger.info('Connected')
 
         await self.expect('Password:')
@@ -74,14 +61,38 @@ class WebREPLUploader:
         if file_dest is None:
             file_dest = os.path.basename(file_path)
         await self.write("f = open('{}', 'w+')".format(file_dest))
+
+        file_size = os.path.getsize(file_path)
+        read_size = 0
+        def report():
+            if report.last_sent == 0 or percent > report.last_sent + 20 or percent == 100:
+                self.logger.info('[{:0.1f}%] Sending file {}'.format(percent, file_path))
+                report.last_sent = percent
+        report.last_sent = 0
+
+        needed_size = 128
+
         with open(file_path, 'r') as f:
-            for line in f.readlines():
-                foo = 'f.write'
-                line = line.replace("'", "\\'")
-                line = line.strip('\n')
-                line = "{}('{}\\n')".format(foo, line)
-                await self.write(line)
+            _buf = ''
+            for linu_number, line in enumerate(f.readlines()):
+                read_size += len(line.encode())
+                _buf += line
+
+                if len(_buf) >= needed_size:
+                    foo = 'f.write'
+                    _buf = _buf.replace("'", "\\'")
+                    _buf = _buf.strip('\n')
+                    _buf = "{}('{}\\n'); ".format(foo, _buf)
+
+                    await self.write(_buf)
+                    _buf = ''
+
+                percent = read_size/file_size*100
+                report()
         await self.write("f.close()")
+
+        percent = 100
+        report()
 
 
 
@@ -92,13 +103,8 @@ async def main():
 
     client = WebREPLUploader(ip, port, password)
     await client.connect()
-    await client.upload_file('../boot.py')
+    await client.upload_file('../wlog.py')
     await client.websocket.close()
-    # msg = await client.write('open("testtest123123", "a+").close()')
-    # msg = await client.write('print("112312312312312323")')
-    # msg = await client.write('print("112312312312312323")')
-    # msg = await client.websocket.recv()
-    # await asyncio.sleep(1)
 
 
 if __name__ == '__main__':

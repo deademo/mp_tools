@@ -1,25 +1,19 @@
-import upload
 import gc
 import machine
 import sys
 import uasyncio as asyncio
 import uio
-
-import settings
 import wifi
 
+import settings
+
 try:
-    
     gc.collect()
-   
 except:
     pass
 
-try:
-    import wlog
-    from wlog import log
-except Exception as e:
-    print(e)
+import wlog
+from wlog import log
 
 
 def exception_traceback_string(exc):
@@ -44,19 +38,13 @@ def process_requirements():
 
 def main():
     gc.collect()
-    wifi.connect(settings.WIFI_SSID, settings.WIFI_PASSWORD)
     # process_requirements()
 
     gc.collect()
     loop = asyncio.get_event_loop()
     try:
-        # asyncio.ensure_future(wlog.logger.start())
-        # log('Logger initialized')
-        gc.collect()
-        asyncio.ensure_future(upload.app.make_server('0.0.0.0', 80))
-        log('Server initialized')
-
-        gc.collect()
+        asyncio.ensure_future(wlog.logger.start())
+        log('Logger initialized')
         try:
             loop.run_until_complete(run())
         except Exception as e:

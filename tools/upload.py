@@ -1,3 +1,4 @@
+import asyncio
 import glob
 import hashlib
 import os
@@ -7,15 +8,17 @@ import time
 
 import discovery
 
+import webrepluploader
+
+
+_client = None
+
 
 try:
     ip = discovery.first()
 except discovery.NotFound:
-    print('No esp found')
-    sys.exit()
-
-request_template = 'http://{ip}:{port}/upload?filename={filename}'
-port = 80
+    ip = '192.168.1.100'
+    print('No esp found, tring to send to {}'.format(ip))
 
 
 def get_hashfile(separator=': '):
@@ -46,28 +49,37 @@ def get_hashfile(separator=': '):
     return file_map
 
 
-def upload(ip, filename, content, port=80, timeout=20, hashfile={}):
+async def upload(ip, filename, content, port=8266, timeout=20, hashfile={}):
+    global _client
+
     filehash = hashlib.md5()
     filehash.update(content)
     filehash = filehash.hexdigest()
-    url = 'http://{}:{}/upload?filename={}&filehash={}'.format(ip, port, filename, filehash)
 
     if hashfile.get(filename) != filehash:
-        response = requests.post(url, data=content, timeout=timeout)
+        await webrepluploader.upload(ip, filename, client=_client)
         return True
     else:
         return False
 
 
-def main():
-    hashfile = get_hashfile()
+async def main():
+    global _client
+
+    if not _client:
+        _client = webrepluploader.WebREPLUploader(ip)
+        _client.print_percent_inline = True
+        await _client.connect()
+
+    # hashfile = get_hashfile()
+    hashfile = {}
     start_time = time.time()
 
     f = lambda x: glob.glob(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), x))
 
     # higher - more priority
     buffer_files = [
-        f("*.mpy"), 
+        # f("*.mpy"), #TODO: byte files not supported at this moment 
         f("*.py"),
     ]
 
@@ -79,26 +91,22 @@ def main():
     files = list(sorted(list(files.values())))
 
     any_file_uploaded = False
-    print('Starting uploading {} files to esp on {}'.format(len(files), ip))
+    print('Uploading {} files to esp on {}'.format(len(files), ip))
     for i, file_name in enumerate(files):
-        print('Uploading "{}"...'.format(file_name), end='', flush=True)
-
         with open(file_name, 'rb') as f:
-            if upload(ip, os.path.basename(file_name), f.read(), hashfile=hashfile):
+            if await upload(ip, file_name, f.read(), hashfile=hashfile):
                 print(' done', flush=True)
                 any_file_uploaded = True
             else:
                 print(' not needed', flush=True)
 
     if any_file_uploaded:
-        try:
-            print('Restarting esp... ', end='', flush=True)
-            requests.get('http://{}:{}/reset'.format(ip, port), timeout=3)
-            print('done', flush=True)
-        except:
-            pass
+        print('Restarting esp... ', end='', flush=True)
+        await _client.restart()
+        print('done', flush=True)
+    await _client.close()
     print('Done for {:0.2f} s'.format(time.time() - start_time), flush=True)
 
 
 if __name__ == '__main__':
-    main()
+    asyncio.get_event_loop().run_until_complete(main())
